@@ -2,66 +2,51 @@
 #include <omp.h> // for OpenMP library functions
 #endif
 #include <cstdio>
-#include <iostream>
 #include <cstdlib>
+#include <iostream>
+
+#include <SFML/Graphics.hpp>
+#include <SFML/System.hpp>
+#include <SFML/Window.hpp>
+
+#define windowWidth 1280
+#define windowHeight 720
 
 int main(int argc, char* argv[]) {
-    int nthreads, tid;
-    tid = -1;
+    sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), "Boids Simulation");
 
-    #ifdef _OPENMP
-    std::cout << "_OPENMP defined" << std::endl;
-    std::cout << "Num processors (Phys+HT): " << omp_get_num_procs() << std::endl;
-    #endif
+    const int numBoids = 10; // numero di agenti (boids)
+    sf::VertexArray boids(sf::Quads, numBoids * 4); // ogni boid è un quadrato (4 vertici)
 
-    printf("Global copy of tid before threads execution = %d\n", tid);
+    // Popoliamo i vertici con posizioni random (o la tua logica di movimento)
+    for (int i = 0; i < numBoids; ++i) {
+        // posizione iniziale random
+        float x = rand() % windowWidth;
+        float y = rand() % windowHeight;
 
-    /* Fork a team of threads giving them their own copies of variables */
-    #pragma omp parallel private(nthreads, tid)
-    {
+        // disegna i 4 vertici del quadrato (il boid)
+        boids[i * 4].position = sf::Vector2f(x, y);
+        boids[i * 4 + 1].position = sf::Vector2f(x + 10, y);
+        boids[i * 4 + 2].position = sf::Vector2f(x + 10, y + 10);
+        boids[i * 4 + 3].position = sf::Vector2f(x, y + 10);
 
-        #ifdef _OPENMP
-        /* Obtain thread number */
-        tid = omp_get_thread_num();
-        printf("Hello World from thread = %d\n", tid);
-
-        /* Only master thread does this */
-        if (tid == 0) {
-            nthreads = omp_get_num_threads();
-            printf("Master thread - Number of threads = %d\n", nthreads);
+        // colore dei boids
+        sf::Color boidColor(255, 255, 255);
+        for (int j = 0; j < 4; ++j) {
+            boids[i * 4 + j].color = boidColor;
         }
-        #endif
+    }
 
-        tid += 100;
-        printf("Local copy of tid = %d\n", tid);
-
-    }  /* All threads join master thread and are destroyed */
-    printf("Global copy of tid after threads execution = %d\n", tid);
-
-    // Bernstein's conditions and OpenMP
-    {
-        const long n = 100;
-        int A[n];
-        int histo[n];
-        #pragma omp parallel for
-        for (int i = 0; i < n; i++)
-            A[i] = i;
-        // XXX the following code will produce bad results !
-        #pragma omp parallel for
-        for (int i = 1; i < n; i++)
-            A[i] = A[i - 1];
-        #pragma omp parallel
-        {
-            #pragma omp for
-            for (int i = 0; i < n; i++)
-                histo[i] = 0;
-            #pragma omp for
-            for (int i = 0; i < n; i++)
-                histo[A[i]]++;
+    // Ciclo principale
+    while (window.isOpen()) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
         }
-        for (int i=0; i<n; i++) {
-            if (histo[i]>1)
-                printf("i: %d - count: %d\n", i, histo[i]);
-        }
+
+        window.clear();
+        window.draw(boids); // Disegna tutti i quadrati (boids)
+        window.display();
     }
 }
