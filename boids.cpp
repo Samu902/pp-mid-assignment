@@ -22,7 +22,7 @@
 // default biasval: 0.001 (user-changeable, or updated dynamically)
 
 // funzione per aggiornare la posizione di un boid
-void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids) {
+void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, float deltaTime) {
     // inizializza le variabili necessarie
     float xpos_avg = 0.0f, ypos_avg = 0.0f;
     float xvel_avg = 0.0f, yvel_avg = 0.0f;
@@ -114,6 +114,6 @@ void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids) {
     }
 
     // aggiornamento finale della posizione
-    boid->x += boid->vx;
-    boid->y += boid->vy;
+    boid->x += boid->vx * deltaTime;
+    boid->y += boid->vy * deltaTime;
 }
