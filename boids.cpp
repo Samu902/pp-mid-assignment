@@ -14,6 +14,8 @@
 #define min_speed 3.0f
 #define max_speed 6.0f
 
+// algoritmo riadattato da https://vanhunteradams.com/Pico/Animal_Movement/Boids-algorithm.html
+
 // The user provides:
 // - number of boids in scout group 1
 // - number of boids in scout group 2
