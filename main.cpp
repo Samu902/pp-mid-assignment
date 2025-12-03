@@ -26,16 +26,11 @@ int main(int argc, char* argv[]) {
 
     // inizializzazione boids
     for (int i = 0; i < numBoids; ++i) {
-        // posizione iniziale random
-        float x = rand() % windowWidth;
-        float y = rand() % windowHeight;
-
-        boids[i].x = x;
-        boids[i].y = y;
+        // posizione iniziale random e velocità nulla
+        boids[i].x = rand() % windowWidth;
+        boids[i].y = rand() % windowHeight;
         boids[i].vx = 0;
         boids[i].vy = 0;
-        boids[i].scout_group = rand() % 2;
-        boids[i].biasval = 0.001f;
     }
 
     // Ciclo principale
@@ -53,7 +48,7 @@ int main(int argc, char* argv[]) {
         for (int i = 0; i < numBoids; ++i)
         {
             // calcola il nuovo stato del boid
-            update_boid_position(&boids[i], boids, numBoids, deltaTime.asSeconds() * speedUpSimulation);
+            update_boid_position(&boids[i], boids, numBoids, deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
 
             float x = boids[i].x;
             float y = boids[i].y;

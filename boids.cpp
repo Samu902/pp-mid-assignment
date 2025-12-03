@@ -5,10 +5,10 @@
 #define visual_range_squared (visual_range * visual_range)
 #define protected_range 8.0f
 #define protected_range_squared (protected_range * protected_range)
-#define centering_factor 0.0005f
+#define centering_factor 0.002f
 #define matching_factor 0.05f
-#define avoid_factor 0.05f
-#define turn_factor 0.2f
+#define avoid_factor 0.025f
+#define turn_factor 0.4f
 #define max_bias 0.01f
 #define bias_increment 0.00004f
 #define min_speed 3.0f
@@ -16,15 +16,8 @@
 
 // algoritmo riadattato da https://vanhunteradams.com/Pico/Animal_Movement/Boids-algorithm.html
 
-// The user provides:
-// - number of boids in scout group 1
-// - number of boids in scout group 2
-// - biasval for scout group 1
-// - biasval for scout group 2
-// default biasval: 0.001 (user-changeable, or updated dynamically)
-
 // funzione per aggiornare la posizione di un boid
-void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, float deltaTime) {
+void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, float deltaTime, int windowWidth, int windowHeight) {
     // inizializza le variabili necessarie
     float xpos_avg = 0.0f, ypos_avg = 0.0f;
     float xvel_avg = 0.0f, yvel_avg = 0.0f;
@@ -65,42 +58,24 @@ void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, flo
         xvel_avg /= static_cast<float>(neighboring_boids);
         yvel_avg /= static_cast<float>(neighboring_boids);
 
-        // aggiungi alla velocità del boid il centering e il matching factor per avvicinarsi al centro dello stormo
-        boid->vx += (xpos_avg - boid->x) * centering_factor + (xvel_avg - boid->vx) * matching_factor;
-        boid->vy += (ypos_avg - boid->y) * centering_factor + (yvel_avg - boid->vy) * matching_factor;
+        // aggiusta la velocità del boid con il centering factor per avvicinarsi al centro dei vicini (cohesion rule)
+        boid->vx += (xpos_avg - boid->x) * centering_factor;
+        boid->vy += (ypos_avg - boid->y) * centering_factor;
+
+        // aggiusta la velocità del boid con il matching factor per avvicinarsi alla velocità media dei vicini (alignment rule)
+        boid->vx += (xvel_avg - boid->vx) * matching_factor;
+        boid->vy += (yvel_avg - boid->vy) * matching_factor;
     }
 
-    // aggiungi alla velocità il avoid factor per allontanarsi dai boids vicini
+    // aggiusta la velocità con il avoid factor per allontanarsi dai boids vicini (separation rule)
     boid->vx += close_dx * avoid_factor;
     boid->vy += close_dy * avoid_factor;
 
     // gestione dei margini dello schermo
-    if (boid->y < 0) boid->vy += turn_factor;
-    if (boid->x > 100) boid->vx -= turn_factor;
-    if (boid->x < 0) boid->vx += turn_factor;
-    if (boid->y > 100) boid->vy -= turn_factor;
-
-    // calcolo dei bias: scout group 1 con bias verso sx, l'altro con bias verso dx
-    if (boid->scout_group == 1) {
-        if (boid->vx > 0) {
-            boid->biasval = std::fmin(max_bias, boid->biasval + bias_increment);
-        } else {
-            boid->biasval = std::fmax(bias_increment, boid->biasval - bias_increment);
-        }
-    } else if (boid->scout_group == 2) {
-        if (boid->vx < 0) {
-            boid->biasval = std::fmin(max_bias, boid->biasval + bias_increment);
-        } else {
-            boid->biasval = std::fmax(bias_increment, boid->biasval - bias_increment);
-        }
-    }
-
-    // applica i bias alla velocità
-    if (boid->scout_group == 1) {
-        boid->vx = (1 - boid->biasval) * boid->vx + boid->biasval * 1;
-    } else if (boid->scout_group == 2) {
-        boid->vx = (1 - boid->biasval) * boid->vx + boid->biasval * (-1);
-    }
+    if (boid->y < windowHeight * 0.05f) boid->vy += turn_factor;
+    if (boid->x > windowWidth * 0.95f) boid->vx -= turn_factor;
+    if (boid->x < windowWidth * 0.05f) boid->vx += turn_factor;
+    if (boid->y > windowHeight * 0.95f) boid->vy -= turn_factor;
 
     //# Calculate the boid's speed
     //# Slow step! Lookup the "alpha max plus beta min" algorithm
