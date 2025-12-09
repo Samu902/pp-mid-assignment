@@ -9,7 +9,9 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-#include "boids.h"
+#include "boids_seq.h"
+
+#define visuals_on true
 
 int main(int argc, char* argv[])
 {
@@ -33,68 +35,84 @@ int main(int argc, char* argv[])
 
     const int windowWidth = 1280;
     const int windowHeight = 720;
+    #if visuals_on
     sf::RenderWindow window(sf::VideoMode(windowWidth, windowHeight), "Boids Simulation");
+    #endif
 
     for (int ai = 0; ai < numberOfAgentsCases; ai++)
     {
         for (int ri = 0; ri < numberOfRuns; ri++)
         {
             std::cout << "Inizio simulazione n. " << (ri + 1) << " su " << numberOfAgents[ai] << " boids." << std::endl;
+            #if visuals_on
             window.setTitle("Boids Simulation (n. " + std::to_string(ri + 1) + ", " + std::to_string(numberOfAgents[ai]) + " agents)");
+            #endif
 
+            // inizializzazione stato boids (posizione iniziale random e velocità nulla)
             Boid* boids = new Boid[numberOfAgents[ai]];
-            sf::VertexArray* boidsQuads = new sf::VertexArray(sf::Quads, numberOfAgents[ai] * 4); // ogni boid è un quadrato (4 vertici)
-            const int quadSize = 3;
-
-            // inizializzazione boids
             for (int i = 0; i < numberOfAgents[ai]; ++i) {
-                // posizione iniziale random e velocità nulla
                 boids[i].x = rand() % windowWidth;
                 boids[i].y = rand() % windowHeight;
                 boids[i].vx = 0;
                 boids[i].vy = 0;
+            }
 
-                // colore del boid
+            #if visuals_on
+            // inizializzazione grafica dei boids: ogni boid è un quadrato bianco (4 vertici)
+            sf::VertexArray* boidsQuads = new sf::VertexArray(sf::Quads, numberOfAgents[ai] * 4);
+            const int quadSize = 3;
+            for (int i = 0; i < numberOfAgents[ai]; ++i)
+            {
                 sf::Color boidColor(255, 255, 255);
                 for (int j = 0; j < 4; ++j) {
                     (*boidsQuads)[i * 4 + j].color = boidColor;
                 }
             }
+            #endif
 
             // ciclo principale di esecuzione
             float totalSimulationTime = 0.0f;
             int elapsedTimeSteps = 0;
             sf::Clock clock;
-            while (window.isOpen())
+            while
+            (
+                elapsedTimeSteps < maxTimeSteps
+                #if visuals_on
+                && window.isOpen()
+                #endif
+            )
             {
+                #if visuals_on
                 sf::Event event;
                 while (window.pollEvent(event))
                 {
                     if (event.type == sf::Event::Closed)
                         window.close();
                 }
+                #endif
                 // clock SFML per smoothing della simulazione
                 sf::Time deltaTime = clock.restart();
 
+                // campiona il punto di inizio di questo time step con un clock ad alta risoluzione
+                auto start = std::chrono::high_resolution_clock::now();
+
                 // aggiorna lo stato dei boids
                 for (int i = 0; i < numberOfAgents[ai]; ++i)
-                {
-                    // campiona il punto di inizio di questa iterazione con un clock ad alta risoluzione
-                    auto start = std::chrono::high_resolution_clock::now();
-
-                    // calcola il nuovo stato del boid
                     update_boid_position(&boids[i], boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
 
-                    // campiona il punto di fine di questa iterazione con un clock ad alta risoluzione
-                    auto stop = std::chrono::high_resolution_clock::now();
+                // campiona il punto di fine di questo time step con un clock ad alta risoluzione
+                auto stop = std::chrono::high_resolution_clock::now();
 
-                    // somma al tempo di esecuzione dell'algoritmo sugli altri boids
-                    totalSimulationTime += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
+                // somma al tempo di esecuzione dell'algoritmo sugli altri boids
+                totalSimulationTime += std::chrono::duration_cast<std::chrono::microseconds>(stop - start).count();
 
+                #if visuals_on
+                // aggiorna i 4 vertici dei quadrati (i boids)
+                for (int i = 0; i < numberOfAgents[ai]; ++i)
+                {
                     float x = boids[i].x;
                     float y = boids[i].y;
 
-                    // disegna i 4 vertici del quadrato (il boid)
                     (*boidsQuads)[i * 4].position = sf::Vector2f(x - quadSize * 0.5f, y - quadSize * 0.5f);
                     (*boidsQuads)[i * 4 + 1].position = sf::Vector2f(x + quadSize * 0.5f, y - quadSize * 0.5f);
                     (*boidsQuads)[i * 4 + 2].position = sf::Vector2f(x + quadSize * 0.5f, y + quadSize * 0.5f);
@@ -105,18 +123,19 @@ int main(int argc, char* argv[])
                 window.clear();
                 window.draw(*boidsQuads);
                 window.display();
+                #endif
 
-                // qua dopo tot time steps esce dal ciclo
+                // incremento time steps e stampa intervalli intermedi
                 elapsedTimeSteps++;
                 if (elapsedTimeSteps % 50 == 0)
                     std::cout << "Time steps: " << elapsedTimeSteps << std::endl;
-                if (elapsedTimeSteps >= maxTimeSteps)
-                    break;
             }
 
             // dealloca gli array per evitare memory leaks
             delete[] boids;
+            #if visuals_on
             delete boidsQuads;
+            #endif
 
             // stampa della misurazione ottenuta a schermo
             std::cout << "Simulazione terminata dopo " << elapsedTimeSteps << " time steps." << std::endl;
@@ -124,8 +143,10 @@ int main(int argc, char* argv[])
             simulationTimes[ai][ri] = totalSimulationTime / 1000000;
         }
     }
+    #if visuals_on
     // chiudi la finestra alla fine di tutte le simulazioni
     window.close();
+    #endif
 
     // calcolo tempo di esecuzione medio per ogni numero di agenti e stampa delle misurazioni ottenute a schermo e su file di log
     for (int ai = 0; ai < numberOfAgentsCases; ai++)

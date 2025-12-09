@@ -1,5 +1,5 @@
-#ifndef BOIDS_H
-#define BOIDS_H
+#ifndef BOIDS_SEQ_H
+#define BOIDS_SEQ_H
 
 // struttura per rappresentare un boid
 typedef struct {

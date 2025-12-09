@@ -1,4 +1,4 @@
-#include "boids.h"
+#include "boids_seq.h"
 #include <cmath>
 
 #define visual_range 40.0f
