@@ -1,3 +1,6 @@
+#ifdef _OPENMP
+#include <omp.h> // for OpenMP library functions
+#endif
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -9,7 +12,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-#include "boids_seq.h"
+#include "boids_omp.h"
 
 #define visuals_on true
 
@@ -29,9 +32,17 @@ int main(int argc, char* argv[])
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
 
     // file di log per salvare i risultati
-    std::ofstream logFile("logfile.txt");
+    std::ofstream logFile("logfile_omp.txt");
     if (!logFile.is_open())
         std::cerr << "Error opening log file." << std::endl;
+
+    // check OpenMP
+    int nthreads, tid;
+    tid = -1;
+    #ifdef _OPENMP
+    std::cout << "_OPENMP is defined." << std::endl;
+    std::cout << "Number of processors (Phys+HT): " << omp_get_num_procs() << std::endl;
+    #endif
 
     const int windowWidth = 1280;
     const int windowHeight = 720;
@@ -48,8 +59,9 @@ int main(int argc, char* argv[])
             window.setTitle("Boids Simulation (n. " + std::to_string(ri + 1) + ", " + std::to_string(numberOfAgents[ai]) + " agents)");
             #endif
 
-            // inizializzazione stato boids (posizione iniziale random e velocità nulla)
+            // inizializzazione stato boids (posizione iniziale random e velocità nulla), i buffer rappresentano rispettivamente lo stato corrente e successivo
             Boid* boids = new Boid[numberOfAgents[ai]];
+            Boid* new_boids = new Boid[numberOfAgents[ai]];
             for (int i = 0; i < numberOfAgents[ai]; ++i) {
                 boids[i].x = rand() % windowWidth;
                 boids[i].y = rand() % windowHeight;
@@ -97,8 +109,15 @@ int main(int argc, char* argv[])
                 auto start = std::chrono::high_resolution_clock::now();
 
                 // aggiorna lo stato dei boids
+                #pragma omp parallel for schedule(static)
                 for (int i = 0; i < numberOfAgents[ai]; ++i)
-                    update_boid_position(&boids[i], boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
+                {
+                    // copia dal vecchio al nuovo buffer
+                    new_boids[i] = boids[i];
+
+                    // aggiorna il nuovo elemento leggendo gli altri boids dal vecchio buffer per evitare di sporcare il nuovo con scritture concorrenti
+                    update_boid_position(&new_boids[i], boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
+                }
 
                 // campiona il punto di fine di questo time step con un clock ad alta risoluzione
                 auto stop = std::chrono::high_resolution_clock::now();
@@ -108,10 +127,11 @@ int main(int argc, char* argv[])
 
                 #if visuals_on
                 // aggiorna i 4 vertici dei quadrati (i boids)
+                #pragma omp parallel for schedule(static)
                 for (int i = 0; i < numberOfAgents[ai]; ++i)
                 {
-                    float x = boids[i].x;
-                    float y = boids[i].y;
+                    float x = new_boids[i].x;
+                    float y = new_boids[i].y;
 
                     (*boidsQuads)[i * 4].position = sf::Vector2f(x - quadSize * 0.5f, y - quadSize * 0.5f);
                     (*boidsQuads)[i * 4 + 1].position = sf::Vector2f(x + quadSize * 0.5f, y - quadSize * 0.5f);
@@ -125,6 +145,9 @@ int main(int argc, char* argv[])
                 window.display();
                 #endif
 
+                // ricopio il nuovo buffer nel vecchio per il prossimo time step
+                std::swap(boids, new_boids);
+
                 // incremento time steps e stampa intervalli intermedi
                 elapsedTimeSteps++;
                 if (elapsedTimeSteps % 50 == 0)
@@ -133,6 +156,7 @@ int main(int argc, char* argv[])
 
             // dealloca gli array per evitare memory leaks
             delete[] boids;
+            delete[] new_boids;
             #if visuals_on
             delete boidsQuads;
             #endif

@@ -1,6 +1,3 @@
-#ifdef _OPENMP
-#include <omp.h> // for OpenMP library functions
-#endif
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -12,7 +9,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-#include "boids_omp.h"
+#include "boids_seq.h"
 
 #define visuals_on true
 
@@ -32,7 +29,7 @@ int main(int argc, char* argv[])
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
 
     // file di log per salvare i risultati
-    std::ofstream logFile("logfile.txt");
+    std::ofstream logFile("logfile_seq.txt");
     if (!logFile.is_open())
         std::cerr << "Error opening log file." << std::endl;
 
