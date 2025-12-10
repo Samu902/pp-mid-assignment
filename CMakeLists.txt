@@ -19,6 +19,7 @@ set(SOURCE_OMP
         omp/main_omp.cpp
         omp/boids_omp.cpp
         omp/boids_omp.h
+        omp/spatial_grid.h
 )
 
 # executables
