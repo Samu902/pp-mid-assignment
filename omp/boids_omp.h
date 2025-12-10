@@ -1,5 +1,4 @@
-#ifndef BOIDS_OMP_H
-#define BOIDS_OMP_H
+#pragma once
 
 // struttura per rappresentare un boid
 typedef struct {
@@ -9,5 +8,3 @@ typedef struct {
 
 // funzione per aggiornare la posizione di un boid
 void update_boid_position(Boid* boid, const Boid* otherboids, int num_boids, float deltaTime, int windowWidth, int windowHeight);
-
-#endif
