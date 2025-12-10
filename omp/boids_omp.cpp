@@ -29,6 +29,7 @@ void update_boid_position(Boid* boid, const Boid* otherboids, const int num_boid
     float close_dx = 0.0f, close_dy = 0.0f;
 
     // itera su tutti gli altri boids dello stormo
+    #pragma omp simd reduction(+:xpos_avg, ypos_avg, xvel_avg, yvel_avg, neighboring_boids, close_dx, close_dy)
     for (int i = 0; i < num_boids; i++) {
         const Boid* otherboid = &otherboids[i];
 
