@@ -17,7 +17,7 @@
 // algoritmo riadattato da https://vanhunteradams.com/Pico/Animal_Movement/Boids-algorithm.html
 
 // funzione per aggiornare la posizione di un boid
-void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, float deltaTime, int windowWidth, int windowHeight) {
+void update_boid_position(Boid* boid, const Boid* otherboids, const int num_boids, float deltaTime, int windowWidth, int windowHeight) {
     // inizializza le variabili necessarie
     float xpos_avg = 0.0f, ypos_avg = 0.0f;
     float xvel_avg = 0.0f, yvel_avg = 0.0f;
@@ -26,15 +26,15 @@ void update_boid_position(Boid* boid, Boid* otherboids, const int num_boids, flo
 
     // itera su tutti gli altri boids dello stormo
     for (int i = 0; i < num_boids; i++) {
-        Boid* otherboid = &otherboids[i];
+        const Boid* otherboid = &otherboids[i];
 
         // calcola la differenza di posizione con l'altro poid
-        float dx = boid->x - otherboid->x;
-        float dy = boid->y - otherboid->y;
+        const float dx = boid->x - otherboid->x;
+        const float dy = boid->y - otherboid->y;
 
         // le due differenze sono minori del visual range?
         if (std::fabs(dx) < visual_range && std::fabs(dy) < visual_range) {
-            float squared_distance = dx * dx + dy * dy;
+            const float squared_distance = dx * dx + dy * dy;
 
             // il quadrato della distanza è minore del quadrato del protected range?
             if (squared_distance < protected_range_squared) {
