@@ -8,6 +8,6 @@ typedef struct {
 } Boid;
 
 // funzione per aggiornare la posizione di un boid
-void update_boid_position(Boid* boid, Boid* otherboids, int num_boids, float deltaTime, int windowWidth, int windowHeight);
+void update_boid_position(Boid* boid, const Boid* otherboids, int num_boids, float deltaTime, int windowWidth, int windowHeight);
 
 #endif
