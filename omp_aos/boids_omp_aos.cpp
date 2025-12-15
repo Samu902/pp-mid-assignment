@@ -1,4 +1,5 @@
-#include "boids_omp.h"
+#include "boids_omp_aos.h"
+#include "spatial_grid.h"
 #include <cmath>
 
 #ifdef _OPENMP
@@ -18,10 +19,47 @@
 #define min_speed 3.0f
 #define max_speed 6.0f
 
+#define spatial_partitioning_on true
+
 // algoritmo riadattato da https://vanhunteradams.com/Pico/Animal_Movement/Boids-algorithm.html
 
-// funzione per aggiornare la posizione di un boid
-void update_boid_position(Boid* boid, const Boid* otherboids, const int num_boids, float deltaTime, int windowWidth, int windowHeight) {
+// funzione per aggiornare la posizione di tutti i boids per un time step
+void update_all_boids(const Boid* boids, Boid* new_boids, int num_boids, float deltaTime, int windowWidth, int windowHeight)
+{
+    #if spatial_partitioning_on
+    // crea la griglia prima del ciclo OpenMP
+    SpatialGrid grid(visual_range); // cell size = visual_range
+    grid.clear();
+    for (int i = 0; i < num_boids; ++i)
+        grid.insert((Boid*)&boids[i]);
+    #endif
+
+    // aggiorna lo stato dei boids
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < num_boids; ++i)
+    {
+        // copia dal vecchio al nuovo buffer
+        new_boids[i] = boids[i];
+
+        #if spatial_partitioning_on
+        // prendi solo vicini rilevanti dalla griglia
+        const std::vector<Boid*> neighborPtrs = grid.get_neighbors((Boid*)&boids[i]);
+        std::vector<Boid> neighbors = {};
+        for (Boid* np: neighborPtrs)
+            neighbors.push_back(*np);
+
+        // aggiorna posizione basandosi solo sui vicini
+        update_boid_position(&new_boids[i], neighbors.data(), neighbors.size(), deltaTime, windowWidth, windowHeight);
+        #else
+        // aggiorna il nuovo elemento leggendo gli altri boids dal vecchio buffer per evitare di sporcare il nuovo con scritture concorrenti
+        update_boid_position(&new_boids[i], boids, num_boids, deltaTime, windowWidth, windowHeight);
+        #endif
+    }
+}
+
+// funzione per aggiornare la posizione di un boid per un time step
+void update_boid_position(Boid* boid, const Boid* otherboids, const int num_boids, float deltaTime, int windowWidth, int windowHeight)
+{
     // inizializza le variabili necessarie
     float xpos_avg = 0.0f, ypos_avg = 0.0f;
     float xvel_avg = 0.0f, yvel_avg = 0.0f;

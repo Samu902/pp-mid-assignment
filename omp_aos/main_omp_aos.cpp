@@ -12,13 +12,9 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-#include "boids_omp.h"
-#include "spatial_grid.h"
+#include "boids_omp_aos.h"
 
 #define visuals_on true
-#define spatial_partitioning_on true
-
-#define visual_range 40.0f
 
 int main(int argc, char* argv[])
 {
@@ -30,7 +26,7 @@ int main(int argc, char* argv[])
     // fattore di velocità globale di simulazione
     const float speedUpSimulation = 50;
     // esegui il programma per un certo numero di time steps
-    const int maxTimeSteps = 2000;
+    const int maxTimeSteps = 1500;
 
     // array per raccogliere i tempi di esecuzione
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
@@ -109,36 +105,11 @@ int main(int argc, char* argv[])
                 // clock SFML per smoothing della simulazione
                 sf::Time deltaTime = clock.restart();
 
-                #if spatial_partitioning_on
-                // crea la griglia prima del ciclo OpenMP
-                SpatialGrid grid(visual_range); // cell size = visual_range
-                grid.clear();
-                for (int i = 0; i < numberOfAgents[ai]; ++i) {
-                    grid.insert(&boids[i]);
-                }
-                #endif
-
                 // campiona il punto di inizio di questo time step con un clock ad alta risoluzione
                 auto start = std::chrono::high_resolution_clock::now();
 
-                // aggiorna lo stato dei boids
-                #pragma omp parallel for schedule(static)
-                for (int i = 0; i < numberOfAgents[ai]; ++i)
-                {
-                    // copia dal vecchio al nuovo buffer
-                    new_boids[i] = boids[i];
-
-                    #if spatial_partitioning_on
-                    // prendi solo vicini rilevanti dalla griglia
-                    const std::vector<Boid*> neighbors = grid.get_neighbors(&boids[i]);
-                    const auto nData = *neighbors.data();
-                    // aggiorna posizione basandosi solo sui vicini
-                    update_boid_position(&new_boids[i], nData, neighbors.size(), deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
-                    #else
-                    // aggiorna il nuovo elemento leggendo gli altri boids dal vecchio buffer per evitare di sporcare il nuovo con scritture concorrenti
-                    update_boid_position(&new_boids[i], boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
-                    #endif
-                }
+                // aggiorna tutti i boids per questo time step
+                update_all_boids(boids, new_boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
 
                 // campiona il punto di fine di questo time step con un clock ad alta risoluzione
                 auto stop = std::chrono::high_resolution_clock::now();

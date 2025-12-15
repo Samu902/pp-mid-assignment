@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_map>
 #include <cmath>
-#include "boids_omp.h"
+#include "boids_omp_aos.h"
 
 // hash key per celle della griglia
 struct CellKey {
