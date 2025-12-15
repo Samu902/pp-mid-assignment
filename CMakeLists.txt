@@ -15,16 +15,26 @@ set(SOURCE_SEQ
         seq/boids_seq.h
 )
 
-set(SOURCE_OMP
-        omp/main_omp.cpp
-        omp/boids_omp.cpp
-        omp/boids_omp.h
-        omp/spatial_grid.h
+set(SOURCE_OMP_AOS
+        omp_aos/main_omp_aos.cpp
+        omp_aos/boids_omp_aos.cpp
+        omp_aos/boids_omp_aos.h
+        omp_aos/spatial_grid.h
+)
+
+set(SOURCE_OMP_SOA
+        omp_soa/main_omp_soa.cpp
+        omp_soa/boids_omp_soa.cpp
+        omp_soa/boids_omp_soa.h
+        omp_soa/spatial_grid.h
 )
 
 # executables
 add_executable(PP_mid_assignment_seq ${SOURCE_SEQ})
 target_link_libraries(PP_mid_assignment_seq sfml-graphics sfml-window sfml-system)
 
-add_executable(PP_mid_assignment_omp ${SOURCE_OMP})
-target_link_libraries(PP_mid_assignment_omp sfml-graphics sfml-window sfml-system)
+add_executable(PP_mid_assignment_omp_aos ${SOURCE_OMP_AOS})
+target_link_libraries(PP_mid_assignment_omp_aos sfml-graphics sfml-window sfml-system)
+
+add_executable(PP_mid_assignment_omp_soa ${SOURCE_OMP_SOA})
+target_link_libraries(PP_mid_assignment_omp_soa sfml-graphics sfml-window sfml-system)
