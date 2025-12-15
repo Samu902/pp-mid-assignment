@@ -1,0 +1,10 @@
+#pragma once
+
+// struttura per rappresentare un boid
+typedef struct {
+    float x, y;      // posizione
+    float vx, vy;    // velocità
+} Boid;
+
+// funzione per aggiornare la posizione di un boid
+void update_boid_position(Boid* boid, const Boid* otherboids, int num_boids, float deltaTime, int windowWidth, int windowHeight);
