@@ -64,13 +64,26 @@ int main(int argc, char* argv[])
             #endif
 
             // inizializzazione stato boids (posizione iniziale random e velocità nulla), i buffer rappresentano rispettivamente lo stato corrente e successivo
-            Boid* boids = new Boid[numberOfAgents[ai]];
-            Boid* new_boids = new Boid[numberOfAgents[ai]];
-            for (int i = 0; i < numberOfAgents[ai]; ++i) {
-                boids[i].x = rand() % windowWidth;
-                boids[i].y = rand() % windowHeight;
-                boids[i].vx = 0;
-                boids[i].vy = 0;
+            Boids boids = Boids{
+                .x = new float[numberOfAgents[ai]],
+                .y = new float[numberOfAgents[ai]],
+                .vx = new float[numberOfAgents[ai]],
+                .vy = new float[numberOfAgents[ai]],
+                .count = numberOfAgents[ai],
+            };
+            Boids new_boids = Boids{
+                .x = new float[numberOfAgents[ai]],
+                .y = new float[numberOfAgents[ai]],
+                .vx = new float[numberOfAgents[ai]],
+                .vy = new float[numberOfAgents[ai]],
+                .count = numberOfAgents[ai],
+            };
+            for (int i = 0; i < numberOfAgents[ai]; ++i)
+            {
+                boids.x[i] = rand() % windowWidth;
+                boids.y[i] = rand() % windowHeight;
+                boids.vx[i] = 0;
+                boids.vy[i] = 0;
             }
 
             #if visuals_on
@@ -122,11 +135,7 @@ int main(int argc, char* argv[])
                 auto start = std::chrono::high_resolution_clock::now();
 
                 // aggiorna lo stato dei boids
-                #pragma omp parallel for schedule(static)
-                for (int i = 0; i < numberOfAgents[ai]; ++i)
-                {
-                    // copia dal vecchio al nuovo buffer
-                    new_boids[i] = boids[i];
+                update_all_boids(boids, new_boids, deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
 
                     #if spatial_partitioning_on
                     // prendi solo vicini rilevanti dalla griglia
@@ -151,8 +160,8 @@ int main(int argc, char* argv[])
                 #pragma omp parallel for schedule(static)
                 for (int i = 0; i < numberOfAgents[ai]; ++i)
                 {
-                    float x = new_boids[i].x;
-                    float y = new_boids[i].y;
+                    float x = new_boids.x[i];
+                    float y = new_boids.y[i];
 
                     (*boidsQuads)[i * 4].position = sf::Vector2f(x - quadSize * 0.5f, y - quadSize * 0.5f);
                     (*boidsQuads)[i * 4 + 1].position = sf::Vector2f(x + quadSize * 0.5f, y - quadSize * 0.5f);
@@ -204,36 +213,4 @@ int main(int argc, char* argv[])
         logFile << "Tempo di esecuzione medio per " << numberOfAgents[ai] << " boids: " << meanTime << " secondi." << std::endl;
     }
     logFile.close();
-
-    // int nthreads, tid;
-    // tid = -1;
-    //
-    // #ifdef _OPENMP
-    // std::cout << "_OPENMP defined" << std::endl;
-    // std::cout << "Num processors (Phys+HT): " << omp_get_num_procs() << std::endl;
-    // #endif
-    //
-    // printf("Global copy of tid before threads execution = %d\n", tid);
-    //
-    // /* Fork a team of threads giving them their own copies of variables */
-    // #pragma omp parallel private(nthreads, tid)
-    // {
-    //
-    //     #ifdef _OPENMP
-    //     /* Obtain thread number */
-    //     tid = omp_get_thread_num();
-    //     printf("Hello World from thread = %d\n", tid);
-    //
-    //     /* Only master thread does this */
-    //     if (tid == 0) {
-    //         nthreads = omp_get_num_threads();
-    //         printf("Master thread - Number of threads = %d\n", nthreads);
-    //     }
-    //     #endif
-    //
-    //     tid += 100;
-    //     printf("Local copy of tid = %d\n", tid);
-    //
-    // }  /* All threads join master thread and are destroyed */
-    // printf("Global copy of tid after threads execution = %d\n", tid);
 }
