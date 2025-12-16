@@ -18,7 +18,11 @@
 #define visuals_on true
 #define spatial_partitioning_on true
 
-#define visual_range 40.0f  //considerare di spostare tutta la logica in boids.cpp (in una specie di update_all_boids e qui lascio solo grafica e misurazione)
+#if spatial_partitioning_on
+#define log_file_name "logfile_omp_soa_sp.txt"
+#else
+#define log_file_name "logfile_omp_soa.txt"
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -30,13 +34,13 @@ int main(int argc, char* argv[])
     // fattore di velocità globale di simulazione
     const float speedUpSimulation = 50;
     // esegui il programma per un certo numero di time steps
-    const int maxTimeSteps = 2000;
+    const int maxTimeSteps = 1500;
 
     // array per raccogliere i tempi di esecuzione
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
 
     // file di log per salvare i risultati
-    std::ofstream logFile("logfile_omp.txt");   // scrivere log su file diversi _omp, _omp_sp, ecc... (magari già a livello di macro cambio il nome in base alle altre macro)
+    std::ofstream logFile(log_file_name);
     if (!logFile.is_open())
         std::cerr << "Error opening log file." << std::endl;
 
