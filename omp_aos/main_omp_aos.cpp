@@ -15,6 +15,13 @@
 #include "boids_omp_aos.h"
 
 #define visuals_on true
+#define spatial_partitioning_on true
+
+#if spatial_partitioning_on
+#define log_file_name "logfile_omp_aos_sp.txt"
+#else
+#define log_file_name "logfile_omp_aos.txt"
+#endif
 
 int main(int argc, char* argv[])
 {
@@ -32,7 +39,7 @@ int main(int argc, char* argv[])
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
 
     // file di log per salvare i risultati
-    std::ofstream logFile("logfile_omp.txt");
+    std::ofstream logFile(log_file_name);
     if (!logFile.is_open())
         std::cerr << "Error opening log file." << std::endl;
 
