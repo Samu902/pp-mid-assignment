@@ -12,8 +12,7 @@
 #include <SFML/System.hpp>
 #include <SFML/Window.hpp>
 
-#include "boids_omp_aos.h"
-#include "spatial_grid.h"
+#include "boids_omp_soa.h"
 
 #define visuals_on true
 #define spatial_partitioning_on true
@@ -126,32 +125,11 @@ int main(int argc, char* argv[])
                 // clock SFML per smoothing della simulazione
                 sf::Time deltaTime = clock.restart();
 
-                #if spatial_partitioning_on
-                // crea la griglia prima del ciclo OpenMP
-                SpatialGrid grid(visual_range); // cell size = visual_range
-                grid.clear();
-                for (int i = 0; i < numberOfAgents[ai]; ++i) {
-                    grid.insert(&boids[i]);
-                }
-                #endif
-
                 // campiona il punto di inizio di questo time step con un clock ad alta risoluzione
                 auto start = std::chrono::high_resolution_clock::now();
 
                 // aggiorna lo stato dei boids
                 update_all_boids(boids, new_boids, deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
-
-                    #if spatial_partitioning_on
-                    // prendi solo vicini rilevanti dalla griglia
-                    const std::vector<Boid*> neighbors = grid.get_neighbors(&boids[i]);
-                    const auto nData = *neighbors.data();
-                    // aggiorna posizione basandosi solo sui vicini
-                    update_boid_position(&new_boids[i], nData, neighbors.size(), deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
-                    #else
-                    // aggiorna il nuovo elemento leggendo gli altri boids dal vecchio buffer per evitare di sporcare il nuovo con scritture concorrenti
-                    update_boid_position(&new_boids[i], boids, numberOfAgents[ai], deltaTime.asSeconds() * speedUpSimulation, windowWidth, windowHeight);
-                    #endif
-                }
 
                 // campiona il punto di fine di questo time step con un clock ad alta risoluzione
                 auto stop = std::chrono::high_resolution_clock::now();
@@ -189,8 +167,14 @@ int main(int argc, char* argv[])
             }
 
             // dealloca gli array per evitare memory leaks
-            delete[] boids;
-            delete[] new_boids;
+            delete[] boids.x;
+            delete[] boids.y;
+            delete[] boids.vx;
+            delete[] boids.vy;
+            delete[] new_boids.x;
+            delete[] new_boids.y;
+            delete[] new_boids.vx;
+            delete[] new_boids.vy;
             #if visuals_on
             delete boidsQuads;
             #endif
