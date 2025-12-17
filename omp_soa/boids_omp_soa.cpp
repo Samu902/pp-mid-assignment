@@ -5,6 +5,7 @@
 #endif
 
 #include "boids_omp_soa.h"
+#include "spatial_grid.h"
 
 #define visual_range 40.0f
 #define visual_range_squared (visual_range * visual_range)
@@ -22,6 +23,25 @@
 // funzione per aggiornare le posizioni di tutti i boids
 void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int windowWidth, int windowHeight)
 {
+    // inizializzazione grid
+    SpatialGrid grid(visual_range, windowWidth, windowHeight, boids.count);
+    grid.clear();
+
+    // fase 1: conteggio
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < boids.count; ++i) {
+        grid.insert(boids.x[i], boids.y[i]);
+    }
+
+    // Prefix sum (seriale, costo trascurabile)
+    grid.build();
+
+    // fase 2: riempimento
+    #pragma omp parallel for schedule(static)
+    for (int i = 0; i < boids.count; ++i) {
+        grid.insert_index(i, boids.x[i], boids.y[i]);
+    }
+
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < boids.count; ++i) {
 
@@ -37,29 +57,41 @@ void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int
         int neighboring_boids = 0;
         float close_dx = 0.0f, close_dy = 0.0f;
 
-        // itera su tutti gli altri boids dello stormo
-        #pragma omp simd reduction(+:xpos_avg,ypos_avg,xvel_avg,yvel_avg,close_dx,close_dy,neighboring_boids)
-        for (int j = 0; j < boids.count; ++j) {
+        // visita cella + 8 adiacenti (in world space)
+        for (int dy = -1; dy <= 1; ++dy) {
+            for (int dx = -1; dx <= 1; ++dx) {
 
-            // calcola la differenza di posizione con l'altro boid
-            float dx = boids.x[i] - boids.x[j];
-            float dy = boids.y[i] - boids.y[j];
+                float sample_x = boids.x[i] + dx * visual_range;
+                float sample_y = boids.y[i] + dy * visual_range;
 
-            // le due differenze sono minori del visual range?
-            if (std::fabs(dx) < visual_range && std::fabs(dy) < visual_range) {
-                const float squared_distance = dx * dx + dy * dy;
+                auto range = grid.cell_content_at(sample_x, sample_y);
+                for (const int* it = range.begin(); it != range.end(); ++it)
+                {
+                    int j = *it;
+                    if (j == i)
+                        continue;
 
-                // il quadrato della distanza è minore del quadrato del protected range?
-                if (squared_distance < protected_range_squared) {
-                    close_dx += dx;
-                    close_dy += dy;
-                } else if (squared_distance < visual_range_squared) { // il quadrato della distanza è minore del quadrato del visual range?
-                    // aggiungi i contributi per calcolare il centro dello stormo
-                    xpos_avg += boids.x[j];
-                    ypos_avg += boids.y[j];
-                    xvel_avg += boids.vx[j];
-                    yvel_avg += boids.vy[j];
-                    neighboring_boids++;
+                    // calcola la differenza di posizione con l'altro boid
+                    float dxw = boids.x[i] - boids.x[j];
+                    float dyw = boids.y[i] - boids.y[j];
+
+                    // le due differenze sono minori del visual range?
+                    if (std::fabs(dxw) < visual_range && std::fabs(dyw) < visual_range) {
+                        const float squared_distance = dxw * dxw + dyw * dyw;
+
+                        // il quadrato della distanza è minore del quadrato del protected range?
+                        if (squared_distance < protected_range_squared) {
+                            close_dx += dxw;
+                            close_dy += dyw;
+                        } else if (squared_distance < visual_range_squared) { // il quadrato della distanza è minore del quadrato del visual range?
+                            // aggiungi i contributi per calcolare il centro dello stormo
+                            xpos_avg += boids.x[j];
+                            ypos_avg += boids.y[j];
+                            xvel_avg += boids.vx[j];
+                            yvel_avg += boids.vy[j];
+                            neighboring_boids++;
+                        }
+                    }
                 }
             }
         }

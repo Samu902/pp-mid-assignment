@@ -19,14 +19,18 @@ struct NeighborRange {
     }
 };
 
-class SpatialGrid {
+class SpatialGrid
+{
 public:
-    float cellSize;
-
-    SpatialGrid(float cellSize, int worldWidth, int worldHeight, int maxBoids) : cellSize(cellSize), worldWidth(worldWidth), worldHeight(worldHeight), maxBoids(maxBoids)
+    SpatialGrid(float cellSize, int worldWidth, int worldHeight, int maxBoids)
     {
-        gridWidth  = (int)std::ceil(worldWidth  / cellSize);
-        gridHeight = (int)std::ceil(worldHeight / cellSize);
+        this->cellSize = cellSize;
+        this->worldWidth = worldWidth;
+        this->worldHeight = worldHeight;
+        this->maxBoids = maxBoids;
+
+        gridWidth  = static_cast<int>(std::ceil(worldWidth  / cellSize));
+        gridHeight = static_cast<int>(std::ceil(worldHeight / cellSize));
         numCells   = gridWidth * gridHeight;
 
         cellCount.resize(numCells);
@@ -34,75 +38,73 @@ public:
         boidIndices.resize(maxBoids);
     }
 
-    // da chiamare ogni frame
-    void clear() {
+    // svuota la griglia
+    void clear()
+    {
         std::fill(cellCount.begin(), cellCount.end(), 0);
     }
 
-    // inserimento boid (equivalente di insert(Boid*))
-    inline void insert(int boidIndex, float x, float y) {
-        int c = cell_index(x, y);
-        cellCount[c]++;
+    // inserisci un boid (prima fase)
+    void insert(float x, float y)
+    {
+        int cell = world_to_cell(x, y);
+        cellCount[cell]++;
     }
 
-    // chiamare dopo tutti gli insert()
-    void build() {
-        // prefix sum
+    // calcola il contenuto della griglia
+    void build()
+    {
         cellStart[0] = 0;
         for (int c = 0; c < numCells; ++c)
             cellStart[c + 1] = cellStart[c] + cellCount[c];
 
-        // reset contatori temporanei
         std::fill(cellCount.begin(), cellCount.end(), 0);
     }
 
-    // seconda fase di inserimento (thread-safe con atomics esterni)
-    inline void insert_index(int boidIndex, float x, float y) {
-        int c = cell_index(x, y);
-        int offset = cellStart[c] + cellCount[c]++;
+    // inserisci un boid (seconda fase)
+    void insert_index(int boidIndex, float x, float y)
+    {
+        int cell   = world_to_cell(x, y);
+        int offset = cellStart[cell] + cellCount[cell]++;
         boidIndices[offset] = boidIndex;
     }
 
-    // restituisce i boids nella cella (non i vicini!)
-    NeighborRange get_cell(int cell) const {
-        return
-        {
+    // leggi il contenuto di una cella
+    NeighborRange cell_content_at(float x, float y) const
+    {
+        int cell = world_to_cell(x, y);
+        return {
             &boidIndices[cellStart[cell]],
             &boidIndices[cellStart[cell + 1]]
         };
     }
 
-    // equivalente di get_neighbors(Boid*): restituisce una cella alla volta
-    inline int cell_of(float x, float y) const {
-        return cell_index(x, y);
-    }
-
-    inline bool valid_cell(int cx, int cy) const {
-        return cx >= 0 && cy >= 0 && cx < gridWidth && cy < gridHeight;
-    }
-
-    inline int flatten(int cx, int cy) const {
-        return cy * gridWidth + cx;
-    }
-
-    inline void cell_coords(int cell, int& cx, int& cy) const {
-        cx = cell % gridWidth;
-        cy = cell / gridWidth;
-    }
-
 private:
-    int worldWidth, worldHeight;
-    int gridWidth, gridHeight;
+    float cellSize;
+    int worldWidth;
+    int worldHeight;
+
+    int gridWidth;
+    int gridHeight;
     int numCells;
     int maxBoids;
 
-    std::vector<int> cellCount;   // temporaneo / contatore
-    std::vector<int> cellStart;   // prefix sum
-    std::vector<int> boidIndices; // indici boids
+    std::vector<int> cellCount;
+    std::vector<int> cellStart;
+    std::vector<int> boidIndices;
 
-    inline int cell_index(float x, float y) const {
-        int cx = (int)std::floor(x / cellSize);
-        int cy = (int)std::floor(y / cellSize);
+    // trasforma coordinate da world a grid 1d
+    inline int world_to_cell(float x, float y) const
+    {
+        // trasformazione coordinate world to grid 2d
+        int cx = static_cast<int>(std::floor(x / cellSize));
+        int cy = static_cast<int>(std::floor(y / cellSize));
+
+        // clamp indici griglia
+        cx = std::clamp(cx, 0, gridWidth  - 1);
+        cy = std::clamp(cy, 0, gridHeight - 1);
+
+        // flatten da 2d a 1d
         return cy * gridWidth + cx;
     }
 };
