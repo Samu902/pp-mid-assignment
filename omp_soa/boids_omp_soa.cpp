@@ -18,11 +18,14 @@
 #define min_speed 3.0f
 #define max_speed 6.0f
 
+#define spatial_partitioning_on true
+
 // algoritmo riadattato da https://vanhunteradams.com/Pico/Animal_Movement/Boids-algorithm.html
 
 // funzione per aggiornare le posizioni di tutti i boids
 void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int windowWidth, int windowHeight)
 {
+    #if spatial_partitioning_on
     // inizializzazione grid
     SpatialGrid grid(visual_range, windowWidth, windowHeight, boids.count);
     grid.clear();
@@ -41,6 +44,7 @@ void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int
     for (int i = 0; i < boids.count; ++i) {
         grid.insert_index(i, boids.x[i], boids.y[i]);
     }
+    #endif
 
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < boids.count; ++i) {
@@ -57,6 +61,7 @@ void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int
         int neighboring_boids = 0;
         float close_dx = 0.0f, close_dy = 0.0f;
 
+        #if spatial_partitioning_on
         // visita cella + 8 adiacenti (in world space)
         for (int dy = -1; dy <= 1; ++dy) {
             for (int dx = -1; dx <= 1; ++dx) {
@@ -95,6 +100,34 @@ void update_all_boids(const Boids& boids, Boids& new_boids, float deltaTime, int
                 }
             }
         }
+        #else
+        // itera su tutti gli altri boids dello stormo
+        #pragma omp simd reduction(+:xpos_avg,ypos_avg,xvel_avg,yvel_avg,close_dx,close_dy,neighboring_boids)
+        for (int j = 0; j < boids.count; ++j) {
+
+            // calcola la differenza di posizione con l'altro boid
+            float dx = boids.x[i] - boids.x[j];
+            float dy = boids.y[i] - boids.y[j];
+
+            // le due differenze sono minori del visual range?
+            if (std::fabs(dx) < visual_range && std::fabs(dy) < visual_range) {
+                const float squared_distance = dx * dx + dy * dy;
+
+                // il quadrato della distanza è minore del quadrato del protected range?
+                if (squared_distance < protected_range_squared) {
+                    close_dx += dx;
+                    close_dy += dy;
+                } else if (squared_distance < visual_range_squared) { // il quadrato della distanza è minore del quadrato del visual range?
+                    // aggiungi i contributi per calcolare il centro dello stormo
+                    xpos_avg += boids.x[j];
+                    ypos_avg += boids.y[j];
+                    xvel_avg += boids.vx[j];
+                    yvel_avg += boids.vy[j];
+                    neighboring_boids++;
+                }
+            }
+        }
+        #endif
 
         float vx = new_boids.vx[i];
         float vy = new_boids.vy[i];
