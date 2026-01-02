@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     // fattore di velocità globale di simulazione
     const float speedUpSimulation = 50;
     // esegui il programma per un certo numero di time steps
-    const int maxTimeSteps = 2000;
+    const int maxTimeSteps = 1500;
 
     // array per raccogliere i tempi di esecuzione
     float simulationTimes[numberOfAgentsCases][numberOfRuns];
