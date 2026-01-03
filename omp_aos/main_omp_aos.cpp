@@ -26,8 +26,8 @@
 int main(int argc, char* argv[])
 {
     // esegui il programma per un certo numero di threads
-    const int numberOfThreadsCases = 3;
-    const int numberOfThreads[numberOfThreadsCases] = {2, 4, 6};
+    const int numberOfThreadsCases = 4;
+    const int numberOfThreads[numberOfThreadsCases] = {2, 4, 6, 8};
     // esegui il programma per un numero diverso di agenti (boids)
     const int numberOfAgentsCases = 6;
     const int numberOfAgents[numberOfAgentsCases] = {100, 500, 1000, 2000, 5000, 10000};
