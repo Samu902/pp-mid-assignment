@@ -12,6 +12,8 @@ The main goal of the project is to analyze and compare different implementations
 
 The project focuses on performance, scalability, and the impact of data organization on parallel execution.
 
+Also, a visual representation was implementend using the **SFML** library.
+
 ---
 
 ## Boids Simulation
@@ -42,16 +44,7 @@ Despite the simplicity of these rules, complex emergent behaviors arise, making 
 
 To build and run the project you need:
 
-- **C++17** or newer
+- **C++ 20** or newer
 - **CMake 3.10+**
 - A compiler with **OpenMP support** (e.g. `g++`, `clang++`)
 - Build tools such as **Make** or **Ninja**
-
----
-
-## Build Instructions
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/Samu902/pp-mid-assignment.git
-   cd pp-mid-assignment
