@@ -145,7 +145,7 @@ int main(int argc, char* argv[])
 
                     #if visuals_on
                     // aggiorna i 4 vertici dei quadrati (i boids)
-#pragma omp parallel for schedule(static)
+                    #pragma omp parallel for schedule(static)
                     for (int i = 0; i < numberOfAgents[ai]; ++i)
                     {
                         float x = new_boids.x[i];
